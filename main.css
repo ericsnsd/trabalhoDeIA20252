@@ -1,0 +1,11 @@
+#matrixContainer {
+    margin-top: 20px;
+}
+
+#matrixContainer table {
+    border-collapse: collapse;
+}
+
+#matrixContainer td {
+    text-align: center;
+}
