@@ -43,3 +43,76 @@ document.getElementById('playButton').addEventListener('click', async () => {
     }
     matrixContainer.appendChild(table);
 });
+
+// Add a configuration button
+const configButton = document.createElement('button');
+configButton.textContent = 'Configurações';
+configButton.addEventListener('click', () => {
+    const configModal = document.getElementById('configModal');
+    configModal.style.display = 'block';
+});
+document.body.appendChild(configButton);
+
+// Create a modal for configuration
+const configModal = document.createElement('div');
+configModal.id = 'configModal';
+configModal.style.display = 'none';
+configModal.style.position = 'fixed';
+configModal.style.top = '50%';
+configModal.style.left = '50%';
+configModal.style.transform = 'translate(-50%, -50%)';
+configModal.style.backgroundColor = 'white';
+configModal.style.padding = '20px';
+configModal.style.border = '1px solid black';
+configModal.style.zIndex = '1000';
+
+// Variables to store configuration options
+let houseDifficulties = [50, 55, 60, 70, 75, 80, 85, 90, 95, 100, 110, 120];
+let bronzeKnightPowers = [1.5, 1.4, 1.3, 1.2, 1.1];
+
+// Add content for editing difficulty levels and cosmic power
+configModal.innerHTML = `
+    <h3>Configurações</h3>
+    <h4>Níveis de Dificuldade das Casas</h4>
+    <table id="difficultyTable">
+        <tr><th>Casa</th><th>Dificuldade</th></tr>
+        ${houseDifficulties.map((difficulty, index) => `
+            <tr>
+                <td>Casa de ${['Áries', 'Touro', 'Gêmeos', 'Câncer', 'Leão', 'Virgem', 'Libra', 'Escorpião', 'Sagitário', 'Capricórnio', 'Aquário', 'Peixes'][index]}</td>
+                <td><input type="number" value="${difficulty}"></td>
+            </tr>
+        `).join('')}
+    </table>
+    <h4>Poder Cósmico dos Cavaleiros de Bronze</h4>
+    <table id="cosmicPowerTable">
+        <tr><th>Cavaleiro</th><th>Poder Cósmico</th></tr>
+        ${['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'].map((knight, index) => `
+            <tr>
+                <td>${knight}</td>
+                <td><input type="number" step="0.1" value="${bronzeKnightPowers[index]}"></td>
+            </tr>
+        `).join('')}
+    </table>
+    <button id="saveConfig">Salvar</button>
+    <button id="closeConfig">Fechar</button>
+`;
+
+// Add event listeners for saving and closing the modal
+configModal.querySelector('#saveConfig').addEventListener('click', () => {
+    const difficultyInputs = document.querySelectorAll('#difficultyTable input');
+    const cosmicPowerInputs = document.querySelectorAll('#cosmicPowerTable input');
+
+    houseDifficulties = Array.from(difficultyInputs).map(input => parseInt(input.value));
+    bronzeKnightPowers = Array.from(cosmicPowerInputs).map(input => parseFloat(input.value));
+
+    console.log('Dificuldades atualizadas:', houseDifficulties);
+    console.log('Poderes Cósmicos atualizados:', bronzeKnightPowers);
+
+    configModal.style.display = 'none';
+});
+
+configModal.querySelector('#closeConfig').addEventListener('click', () => {
+    configModal.style.display = 'none';
+});
+
+document.body.appendChild(configModal);
