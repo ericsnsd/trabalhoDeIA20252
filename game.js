@@ -12,8 +12,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
         for (let j = 0; j < 42; j++) {
             const cell = document.createElement('td');
             cell.style.border = '1px solid black';
-            cell.style.width = '10px';
-            cell.style.height = '10px';
+            cell.style.width = '15px';
+            cell.style.height = '15px';
 
             // Assign colors based on the value in the matrix
             switch (matrix[i][j]) {
@@ -41,7 +41,61 @@ document.getElementById('playButton').addEventListener('click', async () => {
         }
         table.appendChild(row);
     }
+
+    // Create knight containers
+    const knightNames = ['seiya', 'shiryu', 'hyoga', 'shun', 'ikki'];
+    const knightsContainer = document.createElement('div');
+    knightsContainer.style.display = 'flex';
+    knightsContainer.style.justifyContent = 'space-around';
+    knightsContainer.style.marginTop = '20px';
+
+    knightNames.forEach(name => {
+        const knightDiv = document.createElement('div');
+        knightDiv.style.textAlign = 'center';
+        knightDiv.style.margin = '0 10px';
+        
+        // Add name
+        const nameElem = document.createElement('h3');
+        nameElem.textContent = name;
+        knightDiv.appendChild(nameElem);
+        
+        // Add placeholder image
+        const img = document.createElement('img');
+        img.src = `${name}.png`;  // Replace with actual image path when available
+        img.alt = `${name} knight`;
+        img.style.width = '80px';
+        img.style.height = '80px';
+        img.style.border = '1px solid #333';
+        knightDiv.appendChild(img);
+        
+        // Add 5 hearts
+        const heartsDiv = document.createElement('div');
+        heartsDiv.style.marginTop = '5px';
+        
+        for (let i = 0; i < 5; i++) {
+            const heart = document.createElement('span');
+            heart.textContent = '❤️';
+            heart.style.margin = '0 2px';
+            heartsDiv.appendChild(heart);
+        }
+        
+        knightDiv.appendChild(heartsDiv);
+        knightsContainer.appendChild(knightDiv);
+    });
+
+    matrixContainer.appendChild(knightsContainer);
     matrixContainer.appendChild(table);
+
+    table.style.margin = '0 auto';
+    table.style.marginTop = '20px';
+    table.style.borderCollapse = 'collapse';
+
+    matrixContainer.style.display = 'flex';
+    matrixContainer.style.flexDirection = 'column';
+    matrixContainer.style.alignItems = 'center';
+    matrixContainer.style.justifyContent = 'center';
+    matrixContainer.style.maxWidth = '100%';
+    matrixContainer.style.overflowX = 'auto';
 });
 
 // Add a configuration button
@@ -72,7 +126,7 @@ let bronzeKnightPowers = [1.5, 1.4, 1.3, 1.2, 1.1];
 
 // Add content for editing difficulty levels and cosmic power
 configModal.innerHTML = `
-    <h3>Configurações</h3>
+    <h3>Configurações do jogo</h3>
     <h4>Níveis de Dificuldade das Casas</h4>
     <table id="difficultyTable">
         <tr><th>Casa</th><th>Dificuldade</th></tr>
