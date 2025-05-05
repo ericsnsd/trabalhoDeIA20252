@@ -224,14 +224,18 @@ document.getElementById('playButton').addEventListener('click', async () => {
     timerDisplay.textContent = 'Tempo: 0 minutos';
     matrixContainer.appendChild(timerDisplay);
 
-    // Pathfinding algorithm (Dijkstra's)
+    // Pathfinding algorithm (A* instead of Dijkstra's)
     function findShortestPath(matrix, start, end) {
         const rows = matrix.length;
         const cols = matrix[0].length;
         
         // Initialize distances array with Infinity
-        const distances = Array(rows).fill().map(() => Array(cols).fill(Infinity));
-        distances[start.row][start.col] = 0;
+        const gScore = Array(rows).fill().map(() => Array(cols).fill(Infinity)); // Cost from start to current node
+        gScore[start.row][start.col] = 0;
+        
+        // Initialize fScore (gScore + heuristic)
+        const fScore = Array(rows).fill().map(() => Array(cols).fill(Infinity)); // Estimated total cost
+        fScore[start.row][start.col] = heuristic(start, end);
         
         // Track visited nodes
         const visited = Array(rows).fill().map(() => Array(cols).fill(false));
@@ -243,8 +247,13 @@ document.getElementById('playButton').addEventListener('click', async () => {
         const queue = [{
             row: start.row,
             col: start.col,
-            distance: 0
+            fScore: fScore[start.row][start.col]  // Use fScore for priority
         }];
+        
+        // Heuristic function (Manhattan distance)
+        function heuristic(a, b) {
+            return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
+        }
         
         // Helper function to get terrain cost
         function getTerrainCost(cellType) {
@@ -257,8 +266,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
         }
         
         while (queue.length > 0) {
-            // Find node with smallest distance
-            queue.sort((a, b) => a.distance - b.distance);
+            // Find node with smallest fScore
+            queue.sort((a, b) => a.fScore - b.fScore);
             const current = queue.shift();
             
             // If we reached the end, we're done
@@ -282,17 +291,23 @@ document.getElementById('playButton').addEventListener('click', async () => {
                 // Check if valid position
                 if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols && !visited[newRow][newCol]) {
                     const terrainCost = getTerrainCost(matrix[newRow][newCol]);
-                    const newDistance = distances[current.row][current.col] + terrainCost;
+                    const tentativeGScore = gScore[current.row][current.col] + terrainCost;
                     
-                    if (newDistance < distances[newRow][newCol]) {
-                        distances[newRow][newCol] = newDistance;
+                    if (tentativeGScore < gScore[newRow][newCol]) {
+                        // This path is better, record it
                         previous[newRow][newCol] = { row: current.row, col: current.col };
+                        gScore[newRow][newCol] = tentativeGScore;
+                        fScore[newRow][newCol] = tentativeGScore + heuristic({row: newRow, col: newCol}, end);
                         
-                        queue.push({
-                            row: newRow,
-                            col: newCol,
-                            distance: newDistance
-                        });
+                        // Add to queue if not already there
+                        const isInQueue = queue.some(item => item.row === newRow && item.col === newCol);
+                        if (!isInQueue) {
+                            queue.push({
+                                row: newRow,
+                                col: newCol,
+                                fScore: fScore[newRow][newCol]
+                            });
+                        }
                     }
                 }
             }
@@ -319,7 +334,7 @@ document.getElementById('playButton').addEventListener('click', async () => {
             }
         }
         
-        console.log(`Caminho encontrado com ${path.length} passos e ${totalTime} minutos.`);
+        console.log(`Caminho encontrado com A* - ${path.length} passos e ${totalTime} minutos.`);
         return path;
     }
     
