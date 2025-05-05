@@ -77,6 +77,19 @@ document.getElementById('playButton').addEventListener('click', async () => {
     // Append the pathfinding button to the container
     matrixContainer.appendChild(pathfindButton);
 
+    // Create timer display
+    const timerDisplay = document.createElement('div');
+    timerDisplay.id = 'timerDisplay';
+    timerDisplay.style.fontSize = '24px';
+    timerDisplay.style.fontWeight = 'bold';
+    timerDisplay.style.margin = '10px';
+    timerDisplay.style.padding = '10px';
+    timerDisplay.style.border = '2px solid #333';
+    timerDisplay.style.borderRadius = '5px';
+    timerDisplay.style.backgroundColor = '#f0f0f0';
+    timerDisplay.textContent = 'Tempo: 0 minutos';
+    matrixContainer.appendChild(timerDisplay);
+
     // Pathfinding algorithm (Dijkstra's)
     function findShortestPath(matrix, start, end) {
         const rows = matrix.length;
@@ -196,49 +209,43 @@ document.getElementById('playButton').addEventListener('click', async () => {
         }
         
         let step = 0;
+        let elapsedTime = 0;
+        const timerDisplay = document.getElementById('timerDisplay');
+        
+        // Helper function to get terrain cost
+        function getTerrainCost(cellType) {
+            switch (cellType) {
+                case 14: return 200; // Montanhoso
+                case 15: return 1;   // Plano
+                case 16: return 5;   // Rochoso
+                default: return 1;   // Default cost for other cells
+            }
+        }
         
         function showNextStep() {
-            if (step > 0) {
-                // Reset previous cell to original color if not current step
-                for (let i = 0; i < path.length; i++) {
-                    if (i !== step) {
-                        const pos = path[i];
-                        const cell = rows[pos.row].querySelectorAll('td')[pos.col];
-                        const originalColor = originalColors.find(c => 
-                            c.position.row === pos.row && c.position.col === pos.col
-                        );
-                        
-                        if (originalColor) {
-                            cell.style.backgroundColor = originalColor.color;
-                        }
-                    }
-                }
-            }
-            
             if (step < path.length) {
                 // Color current position red
                 const pos = path[step];
                 const cell = rows[pos.row].querySelectorAll('td')[pos.col];
                 cell.style.backgroundColor = 'red';
                 
+                // Add time for this step (except for the start position)
+                if (step > 0) {
+                    const stepCost = getTerrainCost(matrix[pos.row][pos.col]);
+                    elapsedTime += stepCost;
+                    timerDisplay.textContent = `Tempo: ${elapsedTime} minutos`;
+                }
+                
                 step++;
-                setTimeout(showNextStep, 300); // Show next step after 300ms
+                setTimeout(showNextStep, 150);
             } else {
                 // Show completion message with total time
-                let totalTime = 0;
-                for (const pos of path) {
-                    if (pos === path[0]) continue; // Skip start position
-                    switch (matrix[pos.row][pos.col]) {
-                        case 14: totalTime += 200; break; // Montanhoso
-                        case 15: totalTime += 1; break;   // Plano
-                        case 16: totalTime += 5; break;   // Rochoso
-                        default: totalTime += 1; break;   // Default
-                    }
-                }
-                alert(`Caminho concluído em ${totalTime} minutos!`);
+                alert(`Caminho concluído em ${elapsedTime} minutos!`);
             }
         }
         
+        // Reset timer display
+        timerDisplay.textContent = 'Tempo: 0 minutos';
         showNextStep();
     }
 
