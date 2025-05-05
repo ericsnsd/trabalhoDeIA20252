@@ -6,6 +6,10 @@ document.getElementById('playButton').addEventListener('click', async () => {
     const response = await fetch('Mapa.json');
     const matrix = await response.json();
 
+    // Define Bronze Knight powers and House difficulties (new)
+    const bronzeKnightPowers = [100, 95, 90, 85, 110]; // Powers for Seiya, Shiryu, Hyoga, Shun, Ikki
+    const houseDifficulties = [1000, 1200, 1500, 1800, 2000, 2200, 2500, 2800, 3000, 3300, 3500, 4000]; // Powers for each house
+
     const table = document.createElement('table');
     for (let i = 0; i < 42; i++) {
         const row = document.createElement('tr');
@@ -46,6 +50,9 @@ document.getElementById('playButton').addEventListener('click', async () => {
         }
         table.appendChild(row);
     }
+
+    // Add the table to the container (new)
+    matrixContainer.appendChild(table);
 
     // Find start and end positions
     let startPosition = null;
@@ -189,6 +196,236 @@ document.getElementById('playButton').addEventListener('click', async () => {
         return path;
     }
     
+    // Create knight containers
+    const knightNames = ['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'];
+    const knightsContainer = document.createElement('div');
+    knightsContainer.style.display = 'flex';
+    knightsContainer.style.justifyContent = 'space-around';
+    knightsContainer.style.marginTop = '20px';
+    
+    // Track knight hearts (health)
+    const knightHearts = {
+        'Seiya': 5,
+        'Shiryu': 5,
+        'Hyoga': 5,
+        'Shun': 5,
+        'Ikki': 5
+    };
+
+    knightNames.forEach(name => {
+        const knightDiv = document.createElement('div');
+        knightDiv.style.textAlign = 'center';
+        knightDiv.style.margin = '0 10px';
+        knightDiv.id = `knight-${name}`;
+        
+        // Add name
+        const nameElem = document.createElement('h3');
+        nameElem.textContent = name;
+        knightDiv.appendChild(nameElem);
+        
+        // Add placeholder image
+        const img = document.createElement('img');
+        img.src = `${name}.png`;  // Replace with actual image path when available
+        img.alt = `${name} knight`;
+        img.style.width = '80px';
+        img.style.height = '80px';
+        img.style.border = '1px solid #333';
+        knightDiv.appendChild(img);
+        
+        // Add 5 hearts
+        const heartsDiv = document.createElement('div');
+        heartsDiv.style.marginTop = '5px';
+        heartsDiv.id = `hearts-${name}`;
+        
+        for (let i = 0; i < 5; i++) {
+            const heart = document.createElement('span');
+            heart.textContent = '❤️';
+            heart.style.margin = '0 2px';
+            heartsDiv.appendChild(heart);
+        }
+        
+        knightDiv.appendChild(heartsDiv);
+        knightsContainer.appendChild(knightDiv);
+    });
+
+    // Append knights container to the page (new)
+    matrixContainer.appendChild(knightsContainer);
+
+    // Function to update knight hearts display
+    function updateKnightHearts() {
+        knightNames.forEach(name => {
+            const heartsDiv = document.getElementById(`hearts-${name}`);
+            heartsDiv.innerHTML = '';
+            
+            for (let i = 0; i < knightHearts[name]; i++) {
+                const heart = document.createElement('span');
+                heart.textContent = '❤️';
+                heart.style.margin = '0 2px';
+                heartsDiv.appendChild(heart);
+            }
+        });
+    }
+
+    // Create boss fight modal
+    const bossFightModal = document.createElement('div');
+    bossFightModal.id = 'bossFightModal';
+    bossFightModal.style.display = 'none';
+    bossFightModal.style.position = 'fixed';
+    bossFightModal.style.top = '50%';
+    bossFightModal.style.left = '50%';
+    bossFightModal.style.transform = 'translate(-50%, -50%)';
+    bossFightModal.style.backgroundColor = 'white';
+    bossFightModal.style.padding = '20px';
+    bossFightModal.style.border = '1px solid black';
+    bossFightModal.style.zIndex = '1001'; // Higher than config modal
+    bossFightModal.style.minWidth = '400px';
+    bossFightModal.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+    document.body.appendChild(bossFightModal);
+
+    // House name lookup
+    const houseNames = {
+        1: 'Áries', 2: 'Touro', 3: 'Gêmeos', 4: 'Câncer', 
+        5: 'Leão', 6: 'Virgem', 7: 'Libra', 8: 'Escorpião', 
+        9: 'Sagitário', 10: 'Capricórnio', 11: 'Aquário', 12: 'Peixes'
+    };
+
+    // Function to show boss fight
+    function showBossFight(houseIndex, resumeCallback) {
+        const houseName = houseNames[houseIndex];
+        const bossPower = houseDifficulties[houseIndex - 1]; // -1 because houseIndex starts at 1
+        
+        // Automatically select the best fighters
+        const selectedFighters = selectBestFighters(houseIndex, bossPower);
+        
+        // Calculate total power of selected fighters
+        let totalPower = 0;
+        selectedFighters.forEach(name => {
+            const index = knightNames.indexOf(name);
+            totalPower += bronzeKnightPowers[index];
+        });
+        
+        // Calculate battle time
+        const battleTime = Math.round(bossPower / totalPower);
+        
+        // Show the battle results to the player
+        bossFightModal.innerHTML = `
+            <h2>Batalha na Casa de ${houseName}</h2>
+            <p>Poder do Guardião: ${bossPower}</p>
+            <div>
+                <h3>Cavaleiros selecionados automaticamente:</h3>
+                <ul>
+                    ${selectedFighters.map(name => {
+                        const index = knightNames.indexOf(name);
+                        return `<li>${name} (Poder: ${bronzeKnightPowers[index]})</li>`;
+                    }).join('')}
+                </ul>
+                <p>Poder total: ${totalPower.toFixed(1)}</p>
+                <p>Tempo de batalha: ${battleTime} minutos</p>
+                <button id="continueBattle" style="margin-top: 15px; padding: 5px 15px;">Continuar</button>
+            </div>
+        `;
+        
+        bossFightModal.style.display = 'block';
+        
+        // Reduce hearts for selected fighters
+        selectedFighters.forEach(name => {
+            knightHearts[name]--;
+        });
+        
+        // Update hearts display
+        updateKnightHearts();
+        
+        // Add event listener to continue button
+        document.getElementById('continueBattle').addEventListener('click', () => {
+            // Close modal and resume path
+            bossFightModal.style.display = 'none';
+            
+            // Return battle time to the callback
+            resumeCallback(battleTime);
+        });
+    }
+    
+    // Algorithm to select the best fighters for a battle
+    function selectBestFighters(houseIndex, bossPower) {
+        // Calculate how many houses are left (including this one)
+        const remainingHouses = 12 - houseIndex + 1;
+        
+        // Get available fighters (those with hearts)
+        const availableFighters = knightNames.filter(name => knightHearts[name] > 0);
+        
+        // If no fighters available, we need to report a game over
+        if (availableFighters.length === 0) {
+            alert('Todos os cavaleiros estão fora de combate! Fim de jogo.');
+            return [];
+        }
+        
+        // Strategy:
+        // 1. For early houses, use fewer fighters
+        // 2. For later houses, use more fighters as they're more difficult
+        // 3. Always ensure battle time is reasonable (under 60 minutes if possible)
+        
+        // Sort fighters by power efficiency (power/remaining hearts ratio)
+        const sortedFighters = [...availableFighters].sort((a, b) => {
+            const aIndex = knightNames.indexOf(a);
+            const bIndex = knightNames.indexOf(b);
+            const aPowerPerHeart = bronzeKnightPowers[aIndex] / knightHearts[a];
+            const bPowerPerHeart = bronzeKnightPowers[bIndex] / knightHearts[b];
+            return bPowerPerHeart - aPowerPerHeart; // Higher power per heart first
+        });
+        
+        // Determine target battle time based on house difficulty
+        // Earlier houses can take longer, later houses should be faster
+        const targetBattleTime = Math.max(30, 60 - (houseIndex * 2));
+        
+        // Calculate minimum power needed for target time
+        const minPowerNeeded = bossPower / targetBattleTime;
+        
+        // Select fighters until we meet minimum power or run out of fighters
+        const selected = [];
+        let currentPower = 0;
+        
+        // First try to use higher powered fighters if the house is difficult
+        if (houseIndex > 6) { // For later, more difficult houses
+            // Take the top fighters up to half of available fighters
+            const topFightersCount = Math.max(1, Math.floor(availableFighters.length / 2));
+            for (let i = 0; i < topFightersCount && i < sortedFighters.length; i++) {
+                const name = sortedFighters[i];
+                const index = knightNames.indexOf(name);
+                selected.push(name);
+                currentPower += bronzeKnightPowers[index];
+                
+                // If we have enough power, stop adding fighters
+                if (currentPower >= minPowerNeeded) break;
+            }
+        } else {
+            // For earlier houses, be more conservative with fighter selection
+            // Start with the most efficient fighter
+            if (sortedFighters.length > 0) {
+                const name = sortedFighters[0];
+                const index = knightNames.indexOf(name);
+                selected.push(name);
+                currentPower += bronzeKnightPowers[index];
+            }
+        }
+        
+        // If we still need more power and have available fighters, add more
+        for (let i = 0; i < sortedFighters.length && currentPower < minPowerNeeded; i++) {
+            const name = sortedFighters[i];
+            if (!selected.includes(name)) {
+                const index = knightNames.indexOf(name);
+                selected.push(name);
+                currentPower += bronzeKnightPowers[index];
+            }
+        }
+        
+        // Make sure we have at least one fighter
+        if (selected.length === 0 && availableFighters.length > 0) {
+            selected.push(availableFighters[0]);
+        }
+        
+        return selected;
+    }
+
     // Display path step by step
     function displayPathStepByStep(path, table, matrix) {
         if (!path || path.length === 0) {
@@ -224,160 +461,73 @@ document.getElementById('playButton').addEventListener('click', async () => {
         
         function showNextStep() {
             if (step < path.length) {
-                // Color current position red
+                // Get current position
                 const pos = path[step];
                 const cell = rows[pos.row].querySelectorAll('td')[pos.col];
+                const cellType = matrix[pos.row][pos.col];
+                
+                // Color current position red
                 cell.style.backgroundColor = 'red';
                 
-                // Add time for this step (except for the start position)
-                if (step > 0) {
-                    const stepCost = getTerrainCost(matrix[pos.row][pos.col]);
-                    elapsedTime += stepCost;
-                    timerDisplay.textContent = `Tempo: ${elapsedTime} minutos`;
+                // Check if this is a house (1-12)
+                if (cellType >= 1 && cellType <= 12) {
+                    // Pause the path animation and show boss fight
+                    showBossFight(cellType, (battleTime) => {
+                        // Add battle time to total
+                        elapsedTime += battleTime;
+                        timerDisplay.textContent = `Tempo: ${elapsedTime} minutos`;
+                        
+                        // Continue to next step
+                        step++;
+                        setTimeout(showNextStep, 150);
+                    });
+                } else {
+                    // Add time for this step (except for the start position)
+                    if (step > 0) {
+                        const stepCost = getTerrainCost(matrix[pos.row][pos.col]);
+                        elapsedTime += stepCost;
+                        timerDisplay.textContent = `Tempo: ${elapsedTime} minutos`;
+                    }
+                    
+                    // Move to next step
+                    step++;
+                    setTimeout(showNextStep, 150);
                 }
-                
-                step++;
-                setTimeout(showNextStep, 150);
             } else {
-                // Show completion message with total time
-                alert(`Caminho concluído em ${elapsedTime} minutos!`);
+                // Check if all boss fights were won
+                if (checkAllBossesDefeated(path, matrix)) {
+                    // Show completion message with total time
+                    alert(`Caminho concluído em ${elapsedTime} minutos!`);
+                } else {
+                    alert('Nem todas as Casas do Zodíaco foram derrotadas! Missão incompleta.');
+                }
             }
         }
         
-        // Reset timer display
-        timerDisplay.textContent = 'Tempo: 0 minutos';
-        showNextStep();
-    }
-
-    // Create knight containers
-    const knightNames = ['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'];
-    const knightsContainer = document.createElement('div');
-    knightsContainer.style.display = 'flex';
-    knightsContainer.style.justifyContent = 'space-around';
-    knightsContainer.style.marginTop = '20px';
-
-    knightNames.forEach(name => {
-        const knightDiv = document.createElement('div');
-        knightDiv.style.textAlign = 'center';
-        knightDiv.style.margin = '0 10px';
-        
-        // Add name
-        const nameElem = document.createElement('h3');
-        nameElem.textContent = name;
-        knightDiv.appendChild(nameElem);
-        
-        // Add placeholder image
-        const img = document.createElement('img');
-        img.src = `${name}.png`;  // Replace with actual image path when available
-        img.alt = `${name} knight`;
-        img.style.width = '80px';
-        img.style.height = '80px';
-        img.style.border = '1px solid #333';
-        knightDiv.appendChild(img);
-        
-        // Add 5 hearts
-        const heartsDiv = document.createElement('div');
-        heartsDiv.style.marginTop = '5px';
-        
-        for (let i = 0; i < 5; i++) {
-            const heart = document.createElement('span');
-            heart.textContent = '❤️';
-            heart.style.margin = '0 2px';
-            heartsDiv.appendChild(heart);
+        // Function to check if all bosses in the path were defeated
+        function checkAllBossesDefeated(path, matrix) {
+            const defeatedHouses = new Set();
+            
+            // Check each position in the path
+            for (const pos of path) {
+                const cellType = matrix[pos.row][pos.col];
+                if (cellType >= 1 && cellType <= 12) {
+                    defeatedHouses.add(cellType);
+                }
+            }
+            
+            // Check if we have 12 houses defeated
+            return defeatedHouses.size === 12;
         }
         
-        knightDiv.appendChild(heartsDiv);
-        knightsContainer.appendChild(knightDiv);
-    });
-
-    // Append knightsContainer and table to the container
-    matrixContainer.appendChild(knightsContainer);
-    matrixContainer.appendChild(table);
-
-    table.style.margin = '0 auto';
-    table.style.marginTop = '20px';
-    table.style.borderCollapse = 'collapse';
-
-    matrixContainer.style.display = 'flex';
-    matrixContainer.style.flexDirection = 'column';
-    matrixContainer.style.alignItems = 'center';
-    matrixContainer.style.justifyContent = 'center';
-    matrixContainer.style.maxWidth = '100%';
-    matrixContainer.style.overflowX = 'auto';
-
-
-    
+        // Reset timer display and knight hearts for new game
+        timerDisplay.textContent = 'Tempo: 0 minutos';
+        knightNames.forEach(name => {
+            knightHearts[name] = 5;
+        });
+        updateKnightHearts();
+        
+        // Start the path animation
+        showNextStep();
+    }
 });
-
-// Add a configuration button
-const configButton = document.createElement('button');
-configButton.textContent = 'Configurações';
-configButton.addEventListener('click', () => {
-    const configModal = document.getElementById('configModal');
-    configModal.style.display = 'block';
-});
-document.body.appendChild(configButton);
-
-// Create a modal for configuration
-const configModal = document.createElement('div');
-configModal.id = 'configModal';
-configModal.style.display = 'none';
-configModal.style.position = 'fixed';
-configModal.style.top = '50%';
-configModal.style.left = '50%';
-configModal.style.transform = 'translate(-50%, -50%)';
-configModal.style.backgroundColor = 'white';
-configModal.style.padding = '20px';
-configModal.style.border = '1px solid black';
-configModal.style.zIndex = '1000';
-
-// Variables to store configuration options
-let houseDifficulties = [50, 55, 60, 70, 75, 80, 85, 90, 95, 100, 110, 120];
-let bronzeKnightPowers = [1.5, 1.4, 1.3, 1.2, 1.1];
-
-// Add content for editing difficulty levels and cosmic power
-configModal.innerHTML = `
-    <h3>Configurações do jogo</h3>
-    <h4>Níveis de Dificuldade das Casas</h4>
-    <table id="difficultyTable">
-        <tr><th>Casa</th><th>Dificuldade</th></tr>
-        ${houseDifficulties.map((difficulty, index) => `
-            <tr>
-                <td>Casa de ${['Áries', 'Touro', 'Gêmeos', 'Câncer', 'Leão', 'Virgem', 'Libra', 'Escorpião', 'Sagitário', 'Capricórnio', 'Aquário', 'Peixes'][index]}</td>
-                <td><input type="number" value="${difficulty}"></td>
-            </tr>
-        `).join('')}
-    </table>
-    <h4>Poder Cósmico dos Cavaleiros de Bronze</h4>
-    <table id="cosmicPowerTable">
-        <tr><th>Cavaleiro</th><th>Poder Cósmico</th></tr>
-        ${['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'].map((knight, index) => `
-            <tr>
-                <td>${knight}</td>
-                <td><input type="number" step="0.1" value="${bronzeKnightPowers[index]}"></td>
-            </tr>
-        `).join('')}
-    </table>
-    <button id="saveConfig">Salvar</button>
-    <button id="closeConfig">Fechar</button>
-`;
-
-// Add event listeners for saving and closing the modal
-configModal.querySelector('#saveConfig').addEventListener('click', () => {
-    const difficultyInputs = document.querySelectorAll('#difficultyTable input');
-    const cosmicPowerInputs = document.querySelectorAll('#cosmicPowerTable input');
-
-    houseDifficulties = Array.from(difficultyInputs).map(input => parseInt(input.value));
-    bronzeKnightPowers = Array.from(cosmicPowerInputs).map(input => parseFloat(input.value));
-
-    console.log('Dificuldades atualizadas:', houseDifficulties);
-    console.log('Poderes Cósmicos atualizados:', bronzeKnightPowers);
-
-    configModal.style.display = 'none';
-});
-
-configModal.querySelector('#closeConfig').addEventListener('click', () => {
-    configModal.style.display = 'none';
-});
-
-document.body.appendChild(configModal);
