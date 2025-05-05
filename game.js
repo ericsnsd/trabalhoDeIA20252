@@ -37,13 +37,213 @@ document.getElementById('playButton').addEventListener('click', async () => {
                 default: cell.style.backgroundColor = 'black'; break; // Unknown
             }
 
+            // Store the cell's type in a data attribute for pathfinding
+            cell.dataset.type = matrix[i][j];
+            cell.dataset.row = i;
+            cell.dataset.col = j;
+
             row.appendChild(cell);
         }
         table.appendChild(row);
     }
 
+    // Find start and end positions
+    let startPosition = null;
+    let endPosition = null;
+    
+    for (let i = 0; i < 42; i++) {
+        for (let j = 0; j < 42; j++) {
+            if (matrix[i][j] === 0) { // Yellow/start cell
+                startPosition = { row: i, col: j };
+            } else if (matrix[i][j] === 13) { // White/end cell
+                endPosition = { row: i, col: j };
+            }
+        }
+    }
+    
+    // Create pathfinding button
+    const pathfindButton = document.createElement('button');
+    pathfindButton.textContent = 'Encontrar Caminho';
+    pathfindButton.style.margin = '10px';
+    pathfindButton.addEventListener('click', () => {
+        if (startPosition && endPosition) {
+            const path = findShortestPath(matrix, startPosition, endPosition);
+            displayPathStepByStep(path, table, matrix);
+        } else {
+            alert('Não foi possível encontrar os pontos de partida e chegada no mapa.');
+        }
+    });
+    
+    // Append the pathfinding button to the container
+    matrixContainer.appendChild(pathfindButton);
+
+    // Pathfinding algorithm (Dijkstra's)
+    function findShortestPath(matrix, start, end) {
+        const rows = matrix.length;
+        const cols = matrix[0].length;
+        
+        // Initialize distances array with Infinity
+        const distances = Array(rows).fill().map(() => Array(cols).fill(Infinity));
+        distances[start.row][start.col] = 0;
+        
+        // Track visited nodes
+        const visited = Array(rows).fill().map(() => Array(cols).fill(false));
+        
+        // Track previous nodes to reconstruct path
+        const previous = Array(rows).fill().map(() => Array(cols).fill(null));
+        
+        // Priority queue for unvisited nodes
+        const queue = [{
+            row: start.row,
+            col: start.col,
+            distance: 0
+        }];
+        
+        // Helper function to get terrain cost
+        function getTerrainCost(cellType) {
+            switch (cellType) {
+                case 14: return 200; // Montanhoso
+                case 15: return 1;   // Plano
+                case 16: return 5;   // Rochoso
+                default: return 1;   // Default cost for other cells
+            }
+        }
+        
+        while (queue.length > 0) {
+            // Find node with smallest distance
+            queue.sort((a, b) => a.distance - b.distance);
+            const current = queue.shift();
+            
+            // If we reached the end, we're done
+            if (current.row === end.row && current.col === end.col) {
+                break;
+            }
+            
+            // If already visited, skip
+            if (visited[current.row][current.col]) continue;
+            
+            // Mark as visited
+            visited[current.row][current.col] = true;
+            
+            // Check neighbors (up, right, down, left)
+            const directions = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+            
+            for (const [dRow, dCol] of directions) {
+                const newRow = current.row + dRow;
+                const newCol = current.col + dCol;
+                
+                // Check if valid position
+                if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols && !visited[newRow][newCol]) {
+                    const terrainCost = getTerrainCost(matrix[newRow][newCol]);
+                    const newDistance = distances[current.row][current.col] + terrainCost;
+                    
+                    if (newDistance < distances[newRow][newCol]) {
+                        distances[newRow][newCol] = newDistance;
+                        previous[newRow][newCol] = { row: current.row, col: current.col };
+                        
+                        queue.push({
+                            row: newRow,
+                            col: newCol,
+                            distance: newDistance
+                        });
+                    }
+                }
+            }
+        }
+        
+        // Reconstruct path
+        const path = [];
+        let current = { row: end.row, col: end.col };
+        
+        while (current && (current.row !== start.row || current.col !== start.col)) {
+            path.unshift(current);
+            current = previous[current.row][current.col];
+        }
+        
+        if (path.length > 0) {
+            path.unshift(start); // Add start position
+        }
+        
+        // Calculate total time
+        let totalTime = 0;
+        for (const pos of path) {
+            if (pos.row !== start.row || pos.col !== start.col) { // Don't count start position
+                totalTime += getTerrainCost(matrix[pos.row][pos.col]);
+            }
+        }
+        
+        console.log(`Caminho encontrado com ${path.length} passos e ${totalTime} minutos.`);
+        return path;
+    }
+    
+    // Display path step by step
+    function displayPathStepByStep(path, table, matrix) {
+        if (!path || path.length === 0) {
+            alert('Não foi possível encontrar um caminho!');
+            return;
+        }
+        
+        const rows = table.querySelectorAll('tr');
+        const originalColors = [];
+        
+        // Store original colors for restoration
+        for (const pos of path) {
+            const cell = rows[pos.row].querySelectorAll('td')[pos.col];
+            originalColors.push({
+                position: pos,
+                color: cell.style.backgroundColor
+            });
+        }
+        
+        let step = 0;
+        
+        function showNextStep() {
+            if (step > 0) {
+                // Reset previous cell to original color if not current step
+                for (let i = 0; i < path.length; i++) {
+                    if (i !== step) {
+                        const pos = path[i];
+                        const cell = rows[pos.row].querySelectorAll('td')[pos.col];
+                        const originalColor = originalColors.find(c => 
+                            c.position.row === pos.row && c.position.col === pos.col
+                        );
+                        
+                        if (originalColor) {
+                            cell.style.backgroundColor = originalColor.color;
+                        }
+                    }
+                }
+            }
+            
+            if (step < path.length) {
+                // Color current position red
+                const pos = path[step];
+                const cell = rows[pos.row].querySelectorAll('td')[pos.col];
+                cell.style.backgroundColor = 'red';
+                
+                step++;
+                setTimeout(showNextStep, 300); // Show next step after 300ms
+            } else {
+                // Show completion message with total time
+                let totalTime = 0;
+                for (const pos of path) {
+                    if (pos === path[0]) continue; // Skip start position
+                    switch (matrix[pos.row][pos.col]) {
+                        case 14: totalTime += 200; break; // Montanhoso
+                        case 15: totalTime += 1; break;   // Plano
+                        case 16: totalTime += 5; break;   // Rochoso
+                        default: totalTime += 1; break;   // Default
+                    }
+                }
+                alert(`Caminho concluído em ${totalTime} minutos!`);
+            }
+        }
+        
+        showNextStep();
+    }
+
     // Create knight containers
-    const knightNames = ['seiya', 'shiryu', 'hyoga', 'shun', 'ikki'];
+    const knightNames = ['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'];
     const knightsContainer = document.createElement('div');
     knightsContainer.style.display = 'flex';
     knightsContainer.style.justifyContent = 'space-around';
@@ -83,6 +283,7 @@ document.getElementById('playButton').addEventListener('click', async () => {
         knightsContainer.appendChild(knightDiv);
     });
 
+    // Append knightsContainer and table to the container
     matrixContainer.appendChild(knightsContainer);
     matrixContainer.appendChild(table);
 
@@ -96,6 +297,9 @@ document.getElementById('playButton').addEventListener('click', async () => {
     matrixContainer.style.justifyContent = 'center';
     matrixContainer.style.maxWidth = '100%';
     matrixContainer.style.overflowX = 'auto';
+
+
+    
 });
 
 // Add a configuration button
