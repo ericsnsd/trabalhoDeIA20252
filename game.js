@@ -102,19 +102,29 @@ document.getElementById('playButton').addEventListener('click', async () => {
         // Add event listeners for save and cancel buttons
         document.getElementById('saveConfig').addEventListener('click', () => {
             // Update knight powers
-            knightNames.forEach((name, index) => {
-                const input = document.getElementById(`knight-${name}`);
-                const value = parseFloat(input.value);
-                bronzeKnightPowers[index] = isNaN(value) ? 1.0 : value; // Use parseFloat and validate
-            });
-            
+            for (let i = 0; i < knightNames.length; i++) {
+                const input = document.querySelector(`input#knight-${knightNames[i]}`); // Ensure it targets the input element
+                const value = parseFloat(input?.value); // Use optional chaining to avoid errors if input is not found
+                if (!isNaN(value)) {
+                    bronzeKnightPowers[i] = value; // Assign only if valid
+                }
+            }
+
+            // Log updated knight powers for debugging
+            console.log('Updated Bronze Knight Powers:', bronzeKnightPowers);
+
             // Update house difficulties
             for (let i = 0; i < 12; i++) {
-                const input = document.getElementById(`house-${i+1}`);
-                const value = parseFloat(input.value);
-                houseDifficulties[i] = isNaN(value) ? 50 : value; // Use parseFloat and validate
+                const input = document.querySelector(`input#house-${i+1}`); // Ensure it targets the input element
+                const value = parseFloat(input?.value); // Use optional chaining to avoid errors if input is not found
+                if (!isNaN(value)) {
+                    houseDifficulties[i] = value; // Assign only if valid
+                }
             }
-            
+
+            // Log updated house difficulties for debugging
+            console.log('Updated House Difficulties:', houseDifficulties);
+
             // Close modal
             configModal.style.display = 'none';
         });
@@ -418,7 +428,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
         let totalPower = 0;
         selectedFighters.forEach(name => {
             const index = knightNames.indexOf(name);
-            const knightPower = typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0; // Better check
+            const knightPower = index >= 0 && index < bronzeKnightPowers.length ? 
+                bronzeKnightPowers[index] : 1.0; // Use updated powers
             totalPower += knightPower;
         });
         
@@ -437,7 +448,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
                 <ul>
                     ${selectedFighters.map(name => {
                         const index = knightNames.indexOf(name);
-                        const powerValue = typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0; // Better check
+                        const powerValue = index >= 0 && index < bronzeKnightPowers.length ? 
+                            bronzeKnightPowers[index] : 1.0;
                         return `<li>${name} (Poder: ${powerValue.toFixed(1)})</li>`;
                     }).join('')}
                 </ul>
@@ -528,7 +540,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
         // Prepare fighter data with power and remaining hearts
         const fighterData = availableFighters.map(name => {
             const index = knightNames.indexOf(name);
-            const power = typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0;
+            const power = index >= 0 && index < bronzeKnightPowers.length ? 
+                bronzeKnightPowers[index] : 1.0;
             const hearts = knightHearts[name];
             
             // Calculate value metrics for different scenarios
@@ -637,8 +650,10 @@ document.getElementById('playButton').addEventListener('click', async () => {
                 .sort((a, b) => {
                     const aIndex = knightNames.indexOf(a);
                     const bIndex = knightNames.indexOf(b);
-                    const aPower = typeof bronzeKnightPowers[aIndex] === 'number' ? bronzeKnightPowers[aIndex] : 1.0;
-                    const bPower = typeof bronzeKnightPowers[bIndex] === 'number' ? bronzeKnightPowers[bIndex] : 1.0;
+                    const aPower = aIndex >= 0 && aIndex < bronzeKnightPowers.length ? 
+                        bronzeKnightPowers[aIndex] : 1.0;
+                    const bPower = bIndex >= 0 && bIndex < bronzeKnightPowers.length ? 
+                        bronzeKnightPowers[bIndex] : 1.0;
                     return bPower - aPower;
                 });
             
@@ -648,7 +663,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
                 const name = remainingFighters[0];
                 const index = knightNames.indexOf(name);
                 selected.push(name);
-                currentPower += (typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0);
+                currentPower += (index >= 0 && index < bronzeKnightPowers.length ? 
+                    bronzeKnightPowers[index] : 1.0);
                 heartsUsed++;
             }
         }
@@ -659,8 +675,10 @@ document.getElementById('playButton').addEventListener('click', async () => {
             availableFighters.sort((a, b) => {
                 const aIndex = knightNames.indexOf(a);
                 const bIndex = knightNames.indexOf(b);
-                const aPower = typeof bronzeKnightPowers[aIndex] === 'number' ? bronzeKnightPowers[aIndex] : 1.0;
-                const bPower = typeof bronzeKnightPowers[bIndex] === 'number' ? bronzeKnightPowers[bIndex] : 1.0;
+                const aPower = aIndex >= 0 && aIndex < bronzeKnightPowers.length ? 
+                    bronzeKnightPowers[aIndex] : 1.0;
+                const bPower = bIndex >= 0 && bIndex < bronzeKnightPowers.length ? 
+                    bronzeKnightPowers[bIndex] : 1.0;
                 return bPower - aPower;
             });
             selected.push(availableFighters[0]);
@@ -727,7 +745,7 @@ document.getElementById('playButton').addEventListener('click', async () => {
                         
                         // Continue to next step
                         step++;
-                        setTimeout(showNextStep, 150);
+                        setTimeout(showNextStep, 40);
                     });
                 } else {
                     // Add time for this step (except for the start position)
