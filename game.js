@@ -7,8 +7,125 @@ document.getElementById('playButton').addEventListener('click', async () => {
     const matrix = await response.json();
 
     // Define Bronze Knight powers and House difficulties (new)
-    const bronzeKnightPowers = [100, 95, 90, 85, 110]; // Powers for Seiya, Shiryu, Hyoga, Shun, Ikki
-    const houseDifficulties = [1000, 1200, 1500, 1800, 2000, 2200, 2500, 2800, 3000, 3300, 3500, 4000]; // Powers for each house
+    const bronzeKnightPowers = [1.5, 1.4, 1.3, 1.2, 1.1]; // Powers for Seiya, Shiryu, Hyoga, Shun, Ikki
+    const houseDifficulties = [50, 55, 60, 70, 75, 80, 85, 90, 95, 100, 110, 120]; // Powers for each house
+
+    // Create configuration button
+    const configButton = document.createElement('button');
+    configButton.textContent = 'Configurar Poderes';
+    configButton.style.margin = '10px';
+    configButton.style.padding = '8px 15px';
+    configButton.style.backgroundColor = '#4CAF50';
+    configButton.style.color = 'white';
+    configButton.style.border = 'none';
+    configButton.style.borderRadius = '4px';
+    configButton.style.cursor = 'pointer';
+    
+    // Create configuration modal
+    const configModal = document.createElement('div');
+    configModal.id = 'configModal';
+    configModal.style.display = 'none';
+    configModal.style.position = 'fixed';
+    configModal.style.top = '50%';
+    configModal.style.left = '50%';
+    configModal.style.transform = 'translate(-50%, -50%)';
+    configModal.style.backgroundColor = 'white';
+    configModal.style.padding = '20px';
+    configModal.style.border = '1px solid black';
+    configModal.style.zIndex = '1000';
+    configModal.style.width = '500px';
+    configModal.style.maxHeight = '80vh';
+    configModal.style.overflowY = 'auto';
+    configModal.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+    document.body.appendChild(configModal);
+    
+    // Add event listener to config button
+    configButton.addEventListener('click', () => {
+        // Generate config modal content
+        let modalContent = `
+            <h2 style="text-align: center; margin-bottom: 20px;">Configurar Poderes</h2>
+            <div style="margin-bottom: 20px;">
+                <h3>Cavaleiros de Bronze</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        `;
+        
+        // Add inputs for knight powers
+        const knightNames = ['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'];
+        knightNames.forEach((name, index) => {
+            modalContent += `
+                <div style="margin-bottom: 10px;">
+                    <label for="knight-${name}">${name}:</label>
+                    <input type="number" id="knight-${name}" value="${bronzeKnightPowers[index]}" 
+                           min="1" max="500" style="width: 70px; margin-left: 10px;">
+                </div>
+            `;
+        });
+        
+        // Add inputs for house difficulties
+        modalContent += `
+                </div>
+            </div>
+            <div>
+                <h3>Casas do Zodíaco</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        `;
+        
+        const houseNames = [
+            'Áries', 'Touro', 'Gêmeos', 'Câncer', 'Leão', 'Virgem',
+            'Libra', 'Escorpião', 'Sagitário', 'Capricórnio', 'Aquário', 'Peixes'
+        ];
+        
+        houseNames.forEach((name, index) => {
+            modalContent += `
+                <div style="margin-bottom: 10px;">
+                    <label for="house-${index+1}">${name}:</label>
+                    <input type="number" id="house-${index+1}" value="${houseDifficulties[index]}" 
+                           min="500" max="10000" style="width: 70px; margin-left: 10px;">
+                </div>
+            `;
+        });
+        
+        // Add save and cancel buttons
+        modalContent += `
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="saveConfig" style="padding: 8px 15px; margin-right: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">Salvar</button>
+                <button id="cancelConfig" style="padding: 8px 15px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
+            </div>
+        `;
+        
+        // Set modal content and display it
+        configModal.innerHTML = modalContent;
+        configModal.style.display = 'block';
+        
+        // Add event listeners for save and cancel buttons
+        document.getElementById('saveConfig').addEventListener('click', () => {
+            // Update knight powers
+            knightNames.forEach((name, index) => {
+                const input = document.getElementById(`knight-${name}`);
+                const value = parseFloat(input.value);
+                bronzeKnightPowers[index] = isNaN(value) ? 1.0 : value; // Use parseFloat and validate
+            });
+            
+            // Update house difficulties
+            for (let i = 0; i < 12; i++) {
+                const input = document.getElementById(`house-${i+1}`);
+                const value = parseFloat(input.value);
+                houseDifficulties[i] = isNaN(value) ? 50 : value; // Use parseFloat and validate
+            }
+            
+            // Close modal
+            configModal.style.display = 'none';
+        });
+        
+        document.getElementById('cancelConfig').addEventListener('click', () => {
+            configModal.style.display = 'none';
+        });
+    });
+    
+    // Add config button to container
+    matrixContainer.appendChild(configButton);
 
     const table = document.createElement('table');
     for (let i = 0; i < 42; i++) {
@@ -292,7 +409,7 @@ document.getElementById('playButton').addEventListener('click', async () => {
     // Function to show boss fight
     function showBossFight(houseIndex, resumeCallback) {
         const houseName = houseNames[houseIndex];
-        const bossPower = houseDifficulties[houseIndex - 1]; // -1 because houseIndex starts at 1
+        const bossPower = houseDifficulties[houseIndex - 1] || 50; // Default if undefined
         
         // Automatically select the best fighters
         const selectedFighters = selectBestFighters(houseIndex, bossPower);
@@ -301,8 +418,12 @@ document.getElementById('playButton').addEventListener('click', async () => {
         let totalPower = 0;
         selectedFighters.forEach(name => {
             const index = knightNames.indexOf(name);
-            totalPower += bronzeKnightPowers[index];
+            const knightPower = typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0; // Better check
+            totalPower += knightPower;
         });
+        
+        // Ensure totalPower is not zero to avoid division by zero
+        totalPower = totalPower > 0 ? totalPower : 1;
         
         // Calculate battle time
         const battleTime = Math.round(bossPower / totalPower);
@@ -316,7 +437,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
                 <ul>
                     ${selectedFighters.map(name => {
                         const index = knightNames.indexOf(name);
-                        return `<li>${name} (Poder: ${bronzeKnightPowers[index]})</li>`;
+                        const powerValue = typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0; // Better check
+                        return `<li>${name} (Poder: ${powerValue.toFixed(1)})</li>`;
                     }).join('')}
                 </ul>
                 <p>Poder total: ${totalPower.toFixed(1)}</p>
@@ -347,9 +469,6 @@ document.getElementById('playButton').addEventListener('click', async () => {
     
     // Algorithm to select the best fighters for a battle
     function selectBestFighters(houseIndex, bossPower) {
-        // Calculate how many houses are left (including this one)
-        const remainingHouses = 12 - houseIndex + 1;
-        
         // Get available fighters (those with hearts)
         const availableFighters = knightNames.filter(name => knightHearts[name] > 0);
         
@@ -359,69 +478,198 @@ document.getElementById('playButton').addEventListener('click', async () => {
             return [];
         }
         
-        // Strategy:
-        // 1. For early houses, use fewer fighters
-        // 2. For later houses, use more fighters as they're more difficult
-        // 3. Always ensure battle time is reasonable (under 60 minutes if possible)
+        // Calculate the difficulty of remaining houses
+        const remainingHouseIndices = [];
+        for (let i = 1; i <= 12; i++) {
+            if (i >= houseIndex) {
+                remainingHouseIndices.push(i);
+            }
+        }
         
-        // Sort fighters by power efficiency (power/remaining hearts ratio)
-        const sortedFighters = [...availableFighters].sort((a, b) => {
-            const aIndex = knightNames.indexOf(a);
-            const bIndex = knightNames.indexOf(b);
-            const aPowerPerHeart = bronzeKnightPowers[aIndex] / knightHearts[a];
-            const bPowerPerHeart = bronzeKnightPowers[bIndex] / knightHearts[b];
-            return bPowerPerHeart - aPowerPerHeart; // Higher power per heart first
+        const remainingHousePowers = remainingHouseIndices.map(idx => 
+            typeof houseDifficulties[idx-1] === 'number' ? houseDifficulties[idx-1] : 50);
+        
+        // Calculate total remaining difficulty and average
+        const totalRemainingDifficulty = remainingHousePowers.reduce((sum, power) => sum + power, 0);
+        const averageHouseDifficulty = totalRemainingDifficulty / remainingHousePowers.length || 1;
+        
+        // Count how many houses are left
+        const housesRemaining = remainingHouseIndices.length;
+        
+        // Determine if current house is more or less difficult than average
+        const currentHouseDifficulty = bossPower / averageHouseDifficulty;
+        const isCurrentHouseHard = currentHouseDifficulty > 1.2; // 20% harder than average
+        const isCurrentHouseEasy = currentHouseDifficulty < 0.8; // 20% easier than average
+        
+        // Calculate total hearts remaining across all knights
+        const totalHeartsRemaining = availableFighters.reduce((sum, name) => sum + knightHearts[name], 0);
+        
+        // Calculate average hearts needed per remaining house
+        const avgHeartsPerHouse = totalHeartsRemaining / housesRemaining;
+        
+        // Heart budget for this battle - be more conservative when we have fewer hearts
+        let heartBudget;
+        if (avgHeartsPerHouse >= 2.5) {
+            // Plenty of hearts, can use more
+            heartBudget = isCurrentHouseHard ? 3 : isCurrentHouseEasy ? 1 : 2;
+        } else if (avgHeartsPerHouse >= 1.5) {
+            // Moderate hearts, be careful
+            heartBudget = isCurrentHouseHard ? 2 : 1;
+        } else {
+            // Critically low hearts, be extremely conservative
+            heartBudget = Math.min(1, Math.ceil(totalHeartsRemaining / (housesRemaining * 1.5)));
+        }
+        
+        // If it's one of the last 3 houses, we can be less conservative
+        if (housesRemaining <= 3) {
+            heartBudget = Math.max(heartBudget, Math.min(2, totalHeartsRemaining - 1));
+        }
+        
+        // Prepare fighter data with power and remaining hearts
+        const fighterData = availableFighters.map(name => {
+            const index = knightNames.indexOf(name);
+            const power = typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0;
+            const hearts = knightHearts[name];
+            
+            // Calculate value metrics for different scenarios
+            const powerPerHeart = power / Math.max(1, hearts);
+            
+            // If a knight has only 1 heart left, they're more valuable (save for critical battles)
+            const lastHeartFactor = hearts === 1 ? 0.5 : 1.0;
+            
+            // Strong knights with multiple hearts are most useful for hard houses
+            const powerFactor = isCurrentHouseHard ? power : 1.0;
+            
+            // Efficiency score - higher means more likely to be used
+            // For hard houses: prefer strongest knights regardless of hearts
+            // For easier houses: prefer knights with more hearts left
+            const efficiency = isCurrentHouseHard 
+                ? power * lastHeartFactor 
+                : powerPerHeart * lastHeartFactor * powerFactor;
+            
+            return {
+                name,
+                power,
+                hearts,
+                powerPerHeart,
+                efficiency
+            };
         });
         
-        // Determine target battle time based on house difficulty
-        // Earlier houses can take longer, later houses should be faster
-        const targetBattleTime = Math.max(30, 60 - (houseIndex * 2));
+        // Calculate target battle time based on current house difficulty
+        let maxBattleTime;
+        if (isCurrentHouseHard) {
+            // For difficult houses, allow more time
+            maxBattleTime = Math.min(60, 45 + (currentHouseDifficulty - 1) * 15);
+        } else if (isCurrentHouseEasy) {
+            // For easy houses, use less power
+            maxBattleTime = Math.max(20, 30 - (1 - currentHouseDifficulty) * 10);
+        } else {
+            // For average houses, aim for reasonable time
+            maxBattleTime = 35;
+        }
         
-        // Calculate minimum power needed for target time
-        const minPowerNeeded = bossPower / targetBattleTime;
+        // Calculate minimum power needed for target battle time
+        const minPowerNeeded = bossPower / maxBattleTime;
         
-        // Select fighters until we meet minimum power or run out of fighters
+        // Sort fighters based on our efficiency metric
+        // For hard houses, prioritize strongest knights
+        if (isCurrentHouseHard) {
+            fighterData.sort((a, b) => b.power - a.power);
+        } 
+        // For easy houses, prioritize knights with many hearts left
+        else if (isCurrentHouseEasy) {
+            fighterData.sort((a, b) => {
+                // First compare hearts (prioritize knights with more hearts)
+                if (a.hearts > b.hearts) return -1;
+                if (a.hearts < b.hearts) return 1;
+                // If hearts are equal, the weaker knight goes first
+                return a.power - b.power;
+            });
+        }
+        // For average houses, use our balanced efficiency metric
+        else {
+            fighterData.sort((a, b) => b.efficiency - a.efficiency);
+        }
+        
+        // Select fighters without exceeding our heart budget
         const selected = [];
         let currentPower = 0;
+        let heartsUsed = 0;
         
-        // First try to use higher powered fighters if the house is difficult
-        if (houseIndex > 6) { // For later, more difficult houses
-            // Take the top fighters up to half of available fighters
-            const topFightersCount = Math.max(1, Math.floor(availableFighters.length / 2));
-            for (let i = 0; i < topFightersCount && i < sortedFighters.length; i++) {
-                const name = sortedFighters[i];
-                const index = knightNames.indexOf(name);
-                selected.push(name);
-                currentPower += bronzeKnightPowers[index];
+        // First phase: select fighters according to our sorted strategy
+        for (const fighter of fighterData) {
+            // Skip if already selected
+            if (selected.includes(fighter.name)) continue;
+            
+            // Skip if we've used our heart budget (unless we absolutely need more power)
+            if (heartsUsed >= heartBudget && currentPower >= minPowerNeeded * 0.8) continue;
+            
+            // If this is our last knight or our last heart, only use in critical situations
+            const isLastHeart = fighter.hearts === 1 && availableFighters.length > housesRemaining;
+            const isLastKnight = availableFighters.length === 1;
+            
+            if (isLastHeart && !isLastKnight && !isCurrentHouseHard && heartsUsed > 0) {
+                // Save knights with their last heart for harder houses
+                continue;
+            }
+            
+            // Add this fighter
+            selected.push(fighter.name);
+            currentPower += fighter.power;
+            heartsUsed++;
+            
+            // If we have enough power, only continue if we're below heart budget
+            if (currentPower >= minPowerNeeded) {
+                // If we've hit our heart budget, stop adding fighters
+                if (heartsUsed >= heartBudget) break;
                 
-                // If we have enough power, stop adding fighters
-                if (currentPower >= minPowerNeeded) break;
-            }
-        } else {
-            // For earlier houses, be more conservative with fighter selection
-            // Start with the most efficient fighter
-            if (sortedFighters.length > 0) {
-                const name = sortedFighters[0];
-                const index = knightNames.indexOf(name);
-                selected.push(name);
-                currentPower += bronzeKnightPowers[index];
+                // If this isn't a hard house, stop adding fighters to conserve hearts
+                if (!isCurrentHouseHard) break;
             }
         }
         
-        // If we still need more power and have available fighters, add more
-        for (let i = 0; i < sortedFighters.length && currentPower < minPowerNeeded; i++) {
-            const name = sortedFighters[i];
-            if (!selected.includes(name)) {
+        // If we're below minimum power, try adding more fighters but be very careful with hearts
+        if (currentPower < minPowerNeeded * 0.8 && selected.length < availableFighters.length) {
+            // Sort remaining fighters by power (strongest first)
+            const remainingFighters = availableFighters
+                .filter(name => !selected.includes(name))
+                .sort((a, b) => {
+                    const aIndex = knightNames.indexOf(a);
+                    const bIndex = knightNames.indexOf(b);
+                    const aPower = typeof bronzeKnightPowers[aIndex] === 'number' ? bronzeKnightPowers[aIndex] : 1.0;
+                    const bPower = typeof bronzeKnightPowers[bIndex] === 'number' ? bronzeKnightPowers[bIndex] : 1.0;
+                    return bPower - aPower;
+                });
+            
+            // Add one more fighter if really necessary and we have hearts to spare
+            if (remainingFighters.length > 0 && 
+                (heartsUsed < heartBudget || currentPower < minPowerNeeded * 0.6)) {
+                const name = remainingFighters[0];
                 const index = knightNames.indexOf(name);
                 selected.push(name);
-                currentPower += bronzeKnightPowers[index];
+                currentPower += (typeof bronzeKnightPowers[index] === 'number' ? bronzeKnightPowers[index] : 1.0);
+                heartsUsed++;
             }
         }
         
-        // Make sure we have at least one fighter
+        // Make sure we have at least one fighter, even if we exceed our heart budget
         if (selected.length === 0 && availableFighters.length > 0) {
+            // In desperate situations, pick the strongest available
+            availableFighters.sort((a, b) => {
+                const aIndex = knightNames.indexOf(a);
+                const bIndex = knightNames.indexOf(b);
+                const aPower = typeof bronzeKnightPowers[aIndex] === 'number' ? bronzeKnightPowers[aIndex] : 1.0;
+                const bPower = typeof bronzeKnightPowers[bIndex] === 'number' ? bronzeKnightPowers[bIndex] : 1.0;
+                return bPower - aPower;
+            });
             selected.push(availableFighters[0]);
         }
+        
+        // For debugging
+        console.log(`House ${houseIndex} (Power: ${bossPower}): Difficulty rating: ${currentHouseDifficulty.toFixed(2)}, ${isCurrentHouseHard ? 'Hard' : isCurrentHouseEasy ? 'Easy' : 'Average'}`);
+        console.log(`Total hearts: ${totalHeartsRemaining}, Houses left: ${housesRemaining}, Heart budget: ${heartBudget}, Hearts used: ${heartsUsed}`);
+        console.log(`Selected ${selected.length} fighters, total power: ${currentPower.toFixed(1)}, target time: ${maxBattleTime} min`);
         
         return selected;
     }
@@ -491,7 +739,7 @@ document.getElementById('playButton').addEventListener('click', async () => {
                     
                     // Move to next step
                     step++;
-                    setTimeout(showNextStep, 150);
+                    setTimeout(showNextStep, 40);
                 }
             } else {
                 // Check if all boss fights were won
