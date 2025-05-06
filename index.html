@@ -1,21 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Zodíaco</title>
+    <title>Cavaleiros do Zodíaco</title>
     <link rel="stylesheet" href="main.css">
 </head>
+
 <body>
     <header>
-        <h1>Mapa - Cavaleiros do Zodíaco</h1>
+        <img src="assets/CavaleirosOuro.png">
+        <div class="tituloHeader">
+            <h1>Cavaleiros do Zodíaco - O Resgate de Atena!</h1>
+            <img src="assets/CavaleirosBronze.png">
+        </div>
+        <img id="imgAthena" src="assets/Athena.png">
     </header>
     <main>
-        <button id="playButton">Play</button>
-        <div id="matrixContainer">
-            <!-- Matrix will be dynamically generated here -->
+        <div class="rowBotoes">
+            <button class="buttonMenu" id="playButton">Iniciar</button>
+            <button class="buttonMenu" id="configButton">Configurações</button>
+        </div>
+        <div id="containerMatriz">
+            <div id="botaoSimulacao"></div>
+            <div id="displayTimer"></div>
+            <div id="botaoRecomecar"></div>
+            <div id="containerMapaECavaleiros">
+                <div id="historicoEventos"></div>
+                <div id="matrizMapa"></div>
+                <div id="situacaoCavaleiros"></div>
+            </div>
+
         </div>
     </main>
     <script src="game.js"></script>
 </body>
+
 </html>
