@@ -242,7 +242,6 @@ document.getElementById('playButton').addEventListener('click', async () => {
         }
         tabela.appendChild(row);
     }
-    tabela.style.width = '975px';
     matrizMapa.appendChild(tabela);
 
     let posicaoComeco = null;
@@ -267,8 +266,8 @@ document.getElementById('playButton').addEventListener('click', async () => {
             botaoEncontrarCaminho.textContent = 'Simulação em andamento...';
             botaoEncontrarCaminho.style.backgroundColor = "rgb(230, 230, 230)";
             botaoEncontrarCaminho.style.pointerEvents = "none";
-            const caminho = findShortestPath(matriz, posicaoComeco, posicaoFim);
-            displayPathStepByStep(caminho, tabela, matriz);
+            const caminho = achaCaminhoMaisCurto(matriz, posicaoComeco, posicaoFim);
+            displayCaminhoPassoPorPasso(caminho, tabela, matriz);
         }
     });
 
@@ -288,82 +287,68 @@ document.getElementById('playButton').addEventListener('click', async () => {
 
     displayTimer.appendChild(timerDisplay);
 
-    // Pathfinding algorithm (A*)
-    function findShortestPath(matriz, comeco, fim) {
+    // Algoritmo pathfinding (A*)
+    function achaCaminhoMaisCurto(matriz, comeco, fim) {
         const rows = matriz.length;
         const colunas = matriz[0].length;
 
-        // Initialize distances array with Infinity
-        const gScore = Array(rows).fill().map(() => Array(colunas).fill(Infinity)); // Cost from comeco to current node
+        const gScore = Array(rows).fill().map(() => Array(colunas).fill(Infinity)); // custo do comeco para nó atual
         gScore[comeco.row][comeco.col] = 0;
 
-        // Initialize fScore (gScore + heuristic)
-        const fScore = Array(rows).fill().map(() => Array(colunas).fill(Infinity)); // Estimated total cost
+        const fScore = Array(rows).fill().map(() => Array(colunas).fill(Infinity)); // custo total estimado
         fScore[comeco.row][comeco.col] = heuristic(comeco, fim);
 
-        // Track visited nodes
-        const visited = Array(rows).fill().map(() => Array(colunas).fill(false));
+        const visitado = Array(rows).fill().map(() => Array(colunas).fill(false));
 
-        // Track previous nodes to reconstruct path
-        const previous = Array(rows).fill().map(() => Array(colunas).fill(null));
+        const anterior = Array(rows).fill().map(() => Array(colunas).fill(null));
 
-        // Priority queue for unvisited nodes
         const queue = [{
             row: comeco.row,
             col: comeco.col,
-            fScore: fScore[comeco.row][comeco.col]  // Use fScore for priority
+            fScore: fScore[comeco.row][comeco.col]
         }];
 
-        // Heuristic function (Manhattan distance)
+        // Manhattan
         function heuristic(a, b) {
             return Math.abs(a.row - b.row) + Math.abs(a.col - b.col);
         }
 
-        // Helper function to get terrain cost
-        function getTerrainCost(celulaType) {
+        function getCustoTerreno(celulaType) {
             switch (celulaType) {
                 case 14: return 200; // Montanhoso
                 case 15: return 1;   // Plano
                 case 16: return 5;   // Rochoso
-                default: return 1;   // Default cost for other celulas
+                default: return 1;
             }
         }
 
         while (queue.length > 0) {
-            // Find node with smallest fScore
             queue.sort((a, b) => a.fScore - b.fScore);
             const current = queue.shift();
 
-            // If we reached the fim, we're done
             if (current.row === fim.row && current.col === fim.col) {
                 break;
             }
 
-            // If already visited, skip
-            if (visited[current.row][current.col]) continue;
+            if (visitado[current.row][current.col]) continue;
 
-            // Mark as visited
-            visited[current.row][current.col] = true;
+            visitado[current.row][current.col] = true;
 
-            // Check neighbors (up, right, down, left)
-            const directions = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+            const direcoes = [[-1, 0], [0, 1], [1, 0], [0, -1]];
 
-            for (const [dRow, dCol] of directions) {
+            for (const [dRow, dCol] of direcoes) {
                 const newRow = current.row + dRow;
                 const newCol = current.col + dCol;
 
-                // Check if valid position
-                if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < colunas && !visited[newRow][newCol]) {
-                    const terrainCost = getTerrainCost(matriz[newRow][newCol]);
+                if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < colunas && !visitado[newRow][newCol]) {
+                    const terrainCost = getCustoTerreno(matriz[newRow][newCol]);
                     const tentativeGScore = gScore[current.row][current.col] + terrainCost;
 
                     if (tentativeGScore < gScore[newRow][newCol]) {
-                        // This path is better, record it
-                        previous[newRow][newCol] = { row: current.row, col: current.col };
+                        anterior[newRow][newCol] = { row: current.row, col: current.col };
                         gScore[newRow][newCol] = tentativeGScore;
                         fScore[newRow][newCol] = tentativeGScore + heuristic({ row: newRow, col: newCol }, fim);
 
-                        // Add to queue if not already there
                         const isInQueue = queue.some(item => item.row === newRow && item.col === newCol);
                         if (!isInQueue) {
                             queue.push({
@@ -377,29 +362,27 @@ document.getElementById('playButton').addEventListener('click', async () => {
             }
         }
 
-        // Reconstruct path
-        const path = [];
+        const caminho = [];
         let current = { row: fim.row, col: fim.col };
 
         while (current && (current.row !== comeco.row || current.col !== comeco.col)) {
-            path.unshift(current);
-            current = previous[current.row][current.col];
+            caminho.unshift(current);
+            current = anterior[current.row][current.col];
         }
 
-        if (path.length > 0) {
-            path.unshift(comeco); // Add comeco position
+        if (caminho.length > 0) {
+            caminho.unshift(comeco);
         }
 
-        // Calculate total time
-        let totalTime = 0;
-        for (const pos of path) {
-            if (pos.row !== comeco.row || pos.col !== comeco.col) { // Don't count comeco position
-                totalTime += getTerrainCost(matriz[pos.row][pos.col]);
+        let tempoTotal = 0;
+        for (const pos of caminho) {
+            if (pos.row !== comeco.row || pos.col !== comeco.col) {
+                tempoTotal += getCustoTerreno(matriz[pos.row][pos.col]);
             }
         }
-        tempoCaminhado = totalTime;
+        tempoCaminhado = tempoTotal;
 
-        return path;
+        return caminho;
     }
 
     const nomesCavaleiros = ['Seiya', 'Shiryu', 'Hyoga', 'Shun', 'Ikki'];
@@ -506,346 +489,292 @@ document.getElementById('playButton').addEventListener('click', async () => {
     modalLutaBoss.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
     historicoEventos.appendChild(modalLutaBoss);
 
-    function mostraLutaBoss(houseIndex, resumeCallback) {
-        const housenome = nomesCasas[houseIndex - 1];
-        const bossPower = dificuldadesCasas[houseIndex - 1] || 50; // Default if undefined
+    function mostraLutaBoss(casaIndex, resumeCallback) {
+        const nomeDaCasa = nomesCasas[casaIndex - 1];
+        const poderBoss = dificuldadesCasas[casaIndex - 1] || 50;
 
-        const selectedFighters = selectBestFighters(houseIndex, bossPower);
+        const cavaleirosSelecionados = selecionaMelhoresCavaleiros(casaIndex, poderBoss);
 
-        let totalPower = 0;
-        selectedFighters.forEach(nome => {
+        let poderTotal = 0;
+        cavaleirosSelecionados.forEach(nome => {
             const index = nomesCavaleiros.indexOf(nome);
-            const knightPower = index >= 0 && index < poderCavaleiros.length ?
+            const poderCavaleiroBronze = index >= 0 && index < poderCavaleiros.length ?
                 poderCavaleiros[index] : 1.0;
-            totalPower += knightPower;
+            poderTotal += poderCavaleiroBronze;
         });
 
-        totalPower = totalPower > 0 ? totalPower : 1;
+        poderTotal = poderTotal > 0 ? poderTotal : 1;
 
-        const battleTime = Math.round(bossPower / totalPower);
+        const duracaoBatalha = Math.round(poderBoss / poderTotal);
 
-        // Show the battle results to the player
         modalLutaBoss.innerHTML = `
-            <h2 style="margin-top: 0px; font-size: 18px;">Batalha na Casa de ${housenome}</h2>
-            <img src="assets/${housenome}.png" alt="Cavaleiro de ${housenome}" style="width: 150px; height: 285px; object-fit: fill; border: 1px solid #c3c3c3;">
-            <p>Poder do Cavaleiro de Ouro: ${bossPower}</p>
+            <h2 style="margin-top: 0px; font-size: 18px;">Batalha na Casa de ${nomeDaCasa}</h2>
+            <img src="assets/${nomeDaCasa}.png" alt="Cavaleiro de ${nomeDaCasa}" style="width: 150px; height: 285px; object-fit: fill; border: 1px solid #c3c3c3;">
+            <p>Poder do Cavaleiro de Ouro: ${poderBoss}</p>
             <div style="align-items: center">
                 <h3 style="margin-top: 0px; font-size: 18px;">Cavaleiros selecionados:</h3>
                 <ul>
-                    ${selectedFighters.map(nome => {
+                    ${cavaleirosSelecionados.map(nome => {
             const index = nomesCavaleiros.indexOf(nome);
-            const powerValue = index >= 0 && index < poderCavaleiros.length ?
+            const valorPoder = index >= 0 && index < poderCavaleiros.length ?
                 poderCavaleiros[index] : 1.0;
-            return `<li>${nome} (Poder: ${powerValue.toFixed(1)})</li>`;
+            return `<li>${nome} (Poder: ${valorPoder.toFixed(1)})</li>`;
         }).join('')}
                 </ul>
-                <p>Poder total: ${totalPower.toFixed(1)}</p>
-                <p>Tempo de batalha: ${battleTime} minutos</p>
+                <p>Poder total: ${poderTotal.toFixed(1)}</p>
+                <p>Tempo de batalha: ${duracaoBatalha} minutos</p>
                 <button id="continueBattle" class="buttonMenu" style="width: 100%; padding: 5px 15px;">Continuar</button>
             </div>
         `;
 
         modalLutaBoss.style.display = 'flex';
 
-        // Reduce hearts for selected fighters
-        selectedFighters.forEach(nome => {
+        cavaleirosSelecionados.forEach(nome => {
             vidasCavaleiros
             [nome]--;
         });
 
-        // Update hearts display
         atualizaVidaCavaleiros();
 
-        // Add event listener to continue button
         document.getElementById('continueBattle').addEventListener('click', () => {
-            // Close modal and resume path
             modalLutaBoss.style.display = 'none';
 
-            // Return battle time to the callback
-            resumeCallback(battleTime);
+            resumeCallback(duracaoBatalha);
         });
     }
 
-    // Algorithm to select the best fighters for a battle
-    function selectBestFighters(houseIndex, bossPower) {
-        // Get available fighters (those with hearts)
-        const availableFighters = nomesCavaleiros.filter(nome => vidasCavaleiros
+    // Algoritmo selecionar cavaleiros de bronze
+    function selecionaMelhoresCavaleiros(casaIndex, poderBoss) {
+        const cavaleirosVivos = nomesCavaleiros.filter(nome => vidasCavaleiros
         [nome] > 0);
 
-        // If no fighters available, we need to report a game over
-        if (availableFighters.length === 0) {
+        if (cavaleirosVivos.length === 0) {
             alert('Todos os cavaleiros estão fora de combate! Fim de jogo.');
             botaoEncontrarCaminho.textContent = 'Simulação finalizada.';
             return;
         }
 
-        // Calculate the difficulty of remaining houses
-        const remainingHouseIndices = [];
+        const indicesCasasRestantes = [];
         for (let i = 1; i <= 12; i++) {
-            if (i >= houseIndex) {
-                remainingHouseIndices.push(i);
+            if (i >= casaIndex) {
+                indicesCasasRestantes.push(i);
             }
         }
 
-        const remainingHousePowers = remainingHouseIndices.map(idx =>
+        const poderCasasRestantes = indicesCasasRestantes.map(idx =>
             typeof dificuldadesCasas[idx - 1] === 'number' ? dificuldadesCasas[idx - 1] : 50);
 
-        // Calculate total remaining difficulty and average
-        const totalRemainingDifficulty = remainingHousePowers.reduce((sum, power) => sum + power, 0);
-        const averageHouseDifficulty = totalRemainingDifficulty / remainingHousePowers.length || 1;
+        // Calcula dificuldade total restante e a média
+        const dificuldadeRestanteTotal = poderCasasRestantes.reduce((sum, power) => sum + power, 0);
+        const dificuldadeMediaCasas = dificuldadeRestanteTotal / poderCasasRestantes.length || 1;
 
-        // Count how many houses are left
-        const housesRemaining = remainingHouseIndices.length;
+        const casasRestantes = indicesCasasRestantes.length;
 
-        // Determine if current house is more or less difficult than average
-        const currentHouseDifficulty = bossPower / averageHouseDifficulty;
-        const isCurrentHouseHard = currentHouseDifficulty > 1.2; // 20% harder than average
-        const isCurrentHouseEasy = currentHouseDifficulty < 0.8; // 20% easier than average
+        // Determina se a casa atual é mais ou menos dificil que a media
+        const dificuldadeCasaAtual = poderBoss / dificuldadeMediaCasas;
+        const casaAtualEhDificil = dificuldadeCasaAtual > 1.2; // 20% harder than average
+        const casaAtualEhFacil = dificuldadeCasaAtual < 0.8; // 20% easier than average
 
-        // Calculate total hearts remaining across all knights
-        const totalHeartsRemaining = availableFighters.reduce((sum, nome) => sum + vidasCavaleiros
+        const coracoesRestantes = cavaleirosVivos.reduce((sum, nome) => sum + vidasCavaleiros
         [nome], 0);
 
-        // Calculate average hearts needed per remaining house
-        const avgHeartsPerHouse = totalHeartsRemaining / housesRemaining;
+        // Calcula media de coracoes necessarios por casas remanescentes
+        const avgCoracoesPorCasas = coracoesRestantes / casasRestantes;
 
-        // Heart budget for this battle - be more conservative when we have fewer hearts
+        // Moderador de quantidade de corações
         let heartBudget;
-        if (avgHeartsPerHouse >= 2.5) {
-            // Plenty of hearts, can use more
-            heartBudget = isCurrentHouseHard ? 3 : isCurrentHouseEasy ? 1 : 2;
-        } else if (avgHeartsPerHouse >= 1.5) {
-            // Moderate hearts, be careful
-            heartBudget = isCurrentHouseHard ? 2 : 1;
+        if (avgCoracoesPorCasas >= 2.5) {
+            // Varios coracoes
+            heartBudget = casaAtualEhDificil ? 3 : casaAtualEhFacil ? 1 : 2;
+        } else if (avgCoracoesPorCasas >= 1.5) {
+            // Quantidade media
+            heartBudget = casaAtualEhDificil ? 2 : 1;
         } else {
-            // Critically low hearts, be extremely conservative
-            heartBudget = Math.min(1, Math.ceil(totalHeartsRemaining / (housesRemaining * 1.5)));
+            // Seja conservador, poucos coracoes disponiveis
+            heartBudget = Math.min(1, Math.ceil(coracoesRestantes / (casasRestantes * 1.5)));
         }
 
-        // If it's one of the last 3 houses, we can be less conservative
-        if (housesRemaining <= 3) {
-            heartBudget = Math.max(heartBudget, Math.min(2, totalHeartsRemaining - 1));
+        if (casasRestantes <= 3) {
+            heartBudget = Math.max(heartBudget, Math.min(2, coracoesRestantes - 1));
         }
 
-        // Prepare fighter data with power and remaining hearts
-        const fighterData = availableFighters.map(nome => {
+        const dadosLutador = cavaleirosVivos.map(nome => {
             const index = nomesCavaleiros.indexOf(nome);
-            const power = index >= 0 && index < poderCavaleiros.length ?
+            const poder = index >= 0 && index < poderCavaleiros.length ?
                 poderCavaleiros[index] : 1.0;
-            const hearts = vidasCavaleiros
+            const coracoes = vidasCavaleiros
             [nome];
 
-            // Calculate value metrics for different scenarios
-            const powerPerHeart = power / Math.max(1, hearts);
+            const poderPorCoracao = poder / Math.max(1, coracoes);
 
-            // If a knight has only 1 heart left, they're more valuable (save for critical battles)
-            const lastHeartFactor = hearts === 1 ? 0.5 : 1.0;
+            const fatorUltimoCoracao = coracoes === 1 ? 0.5 : 1.0;
 
-            // Strong knights with multiple hearts are most useful for hard houses
-            const powerFactor = isCurrentHouseHard ? power : 1.0;
+            const fatorPoder = casaAtualEhDificil ? poder : 1.0;
 
-            // Efficiency score - higher means more likely to be used
-            // For hard houses: prefer strongest knights regardless of hearts
-            // For easier houses: prefer knights with more hearts left
-            const efficiency = isCurrentHouseHard
-                ? power * lastHeartFactor
-                : powerPerHeart * lastHeartFactor * powerFactor;
+            // quanto mais eficiencia, mais chance de ser usado
+            // para casas dificeis, use cavaleiros fortes sem ligar para seus coracoes
+            // para casas faceis, use cavaleiros com mais coracoes disponiveis
+            const eficiencia = casaAtualEhDificil
+                ? poder * fatorUltimoCoracao
+                : poderPorCoracao * fatorUltimoCoracao * fatorPoder;
 
             return {
                 nome,
-                power,
-                hearts,
-                powerPerHeart,
-                efficiency
+                poder,
+                coracoes,
+                poderPorCoracao,
+                eficiencia
             };
         });
 
-        // Calculate target battle time based on current house difficulty
-        let maxBattleTime;
-        if (isCurrentHouseHard) {
-            // For difficult houses, allow more time
-            maxBattleTime = Math.min(60, 45 + (currentHouseDifficulty - 1) * 15);
-        } else if (isCurrentHouseEasy) {
-            // For easy houses, use less power
-            maxBattleTime = Math.max(20, 30 - (1 - currentHouseDifficulty) * 10);
+        let maxDuracaoBatalha;
+        if (casaAtualEhDificil) {
+            maxDuracaoBatalha = Math.min(60, 45 + (dificuldadeCasaAtual - 1) * 15);
+        } else if (casaAtualEhFacil) {
+            maxDuracaoBatalha = Math.max(20, 30 - (1 - dificuldadeCasaAtual) * 10);
         } else {
-            // For average houses, aim for reasonable time
-            maxBattleTime = 35;
+            maxDuracaoBatalha = 35;
         }
 
-        // Calculate minimum power needed for target battle time
-        const minPowerNeeded = bossPower / maxBattleTime;
+        const minPoderNecessario = poderBoss / maxDuracaoBatalha;
 
-        // Sort fighters based on our efficiency metric
-        // For hard houses, prioritize strongest knights
-        if (isCurrentHouseHard) {
-            fighterData.sort((a, b) => b.power - a.power);
+        if (casaAtualEhDificil) {
+            dadosLutador.sort((a, b) => b.poder - a.poder);
         }
-        // For easy houses, prioritize knights with many hearts left
-        else if (isCurrentHouseEasy) {
-            fighterData.sort((a, b) => {
-                // First compare hearts (prioritize knights with more hearts)
-                if (a.hearts > b.hearts) return -1;
-                if (a.hearts < b.hearts) return 1;
-                // If hearts are equal, the weaker knight goes first
-                return a.power - b.power;
+        else if (casaAtualEhFacil) {
+            dadosLutador.sort((a, b) => {
+                if (a.coracoes > b.coracoes) return -1;
+                if (a.coracoes < b.coracoes) return 1;
+                return a.poder - b.poder;
             });
         }
-        // For average houses, use our balanced efficiency metric
         else {
-            fighterData.sort((a, b) => b.efficiency - a.efficiency);
+            dadosLutador.sort((a, b) => b.eficiencia - a.eficiencia);
         }
 
-        // Select fighters without exceeding our heart budget
-        const selected = [];
-        let currentPower = 0;
-        let heartsUsed = 0;
+        const guerreirosSelecionados = [];
+        let poderAtual = 0;
+        let coracoesGastos = 0;
 
-        // First phase: select fighters according to our sorted strategy
-        for (const fighter of fighterData) {
-            // Skip if already selected
-            if (selected.includes(fighter.nome)) continue;
+        for (const cavaleiro of dadosLutador) {
+            if (guerreirosSelecionados.includes(cavaleiro.nome)) continue;
 
-            // Skip if we've used our heart budget (unless we absolutely need more power)
-            if (heartsUsed >= heartBudget && currentPower >= minPowerNeeded * 0.8) continue;
+            if (coracoesGastos >= heartBudget && poderAtual >= minPoderNecessario * 0.8) continue;
 
-            // If this is our last knight or our last heart, only use in critical situations
-            const isLastHeart = fighter.hearts === 1 && availableFighters.length > housesRemaining;
-            const isLastKnight = availableFighters.length === 1;
+            const ehUltimoCoracao = cavaleiro.coracoes === 1 && cavaleirosVivos.length > casasRestantes;
+            const ehUltimoCavaleiro = cavaleirosVivos.length === 1;
 
-            if (isLastHeart && !isLastKnight && !isCurrentHouseHard && heartsUsed > 0) {
-                // Save knights with their last heart for harder houses
+            if (ehUltimoCoracao && !ehUltimoCavaleiro && !casaAtualEhDificil && coracoesGastos > 0) {
                 continue;
             }
 
-            // Add this fighter
-            selected.push(fighter.nome);
-            currentPower += fighter.power;
-            heartsUsed++;
+            guerreirosSelecionados.push(cavaleiro.nome);
+            poderAtual += cavaleiro.poder;
+            coracoesGastos++;
 
-            // If we have enough power, only continue if we're below heart budget
-            if (currentPower >= minPowerNeeded) {
-                // If we've hit our heart budget, stop adding fighters
-                if (heartsUsed >= heartBudget) break;
-
-                // If this isn't a hard house, stop adding fighters to conserve hearts
-                if (!isCurrentHouseHard) break;
+            if (poderAtual >= minPoderNecessario) {
+                if (coracoesGastos >= heartBudget) break;
+                if (!casaAtualEhDificil) break;
             }
         }
 
-        // If we're below minimum power, try adding more fighters but be very careful with hearts
-        if (currentPower < minPowerNeeded * 0.8 && selected.length < availableFighters.length) {
-            // Sort remaining fighters by power (strongest first)
-            const remainingFighters = availableFighters
-                .filter(nome => !selected.includes(nome))
+        if (poderAtual < minPoderNecessario * 0.8 && guerreirosSelecionados.length < cavaleirosVivos.length) {
+            const guerreirosRestantes = cavaleirosVivos
+                .filter(nome => !guerreirosSelecionados.includes(nome))
                 .sort((a, b) => {
                     const aIndex = nomesCavaleiros.indexOf(a);
                     const bIndex = nomesCavaleiros.indexOf(b);
-                    const aPower = aIndex >= 0 && aIndex < poderCavaleiros.length ?
+                    const aPoder = aIndex >= 0 && aIndex < poderCavaleiros.length ?
                         poderCavaleiros[aIndex] : 1.0;
-                    const bPower = bIndex >= 0 && bIndex < poderCavaleiros.length ?
+                    const bPoder = bIndex >= 0 && bIndex < poderCavaleiros.length ?
                         poderCavaleiros[bIndex] : 1.0;
-                    return bPower - aPower;
+                    return bPoder - aPoder;
                 });
 
-            // Add one more fighter if really necessary and we have hearts to spare
-            if (remainingFighters.length > 0 &&
-                (heartsUsed < heartBudget || currentPower < minPowerNeeded * 0.6)) {
-                const nome = remainingFighters[0];
+            if (guerreirosRestantes.length > 0 &&
+                (coracoesGastos < heartBudget || poderAtual < minPoderNecessario * 0.6)) {
+                const nome = guerreirosRestantes[0];
                 const index = nomesCavaleiros.indexOf(nome);
-                selected.push(nome);
-                currentPower += (index >= 0 && index < poderCavaleiros.length ?
+                guerreirosSelecionados.push(nome);
+                poderAtual += (index >= 0 && index < poderCavaleiros.length ?
                     poderCavaleiros[index] : 1.0);
-                heartsUsed++;
+                coracoesGastos++;
             }
         }
 
-        // Make sure we have at least one fighter, even if we exceed our heart budget
-        if (selected.length === 0 && availableFighters.length > 0) {
-            // In desperate situations, pick the strongest available
-            availableFighters.sort((a, b) => {
+        if (guerreirosSelecionados.length === 0 && cavaleirosVivos.length > 0) {
+            cavaleirosVivos.sort((a, b) => {
                 const aIndex = nomesCavaleiros.indexOf(a);
                 const bIndex = nomesCavaleiros.indexOf(b);
-                const aPower = aIndex >= 0 && aIndex < poderCavaleiros.length ?
+                const aPoder = aIndex >= 0 && aIndex < poderCavaleiros.length ?
                     poderCavaleiros[aIndex] : 1.0;
-                const bPower = bIndex >= 0 && bIndex < poderCavaleiros.length ?
+                const bPoder = bIndex >= 0 && bIndex < poderCavaleiros.length ?
                     poderCavaleiros[bIndex] : 1.0;
-                return bPower - aPower;
+                return bPoder - aPoder;
             });
-            selected.push(availableFighters[0]);
+            guerreirosSelecionados.push(cavaleirosVivos[0]);
         }
 
-        tempoBatalhado += Math.round(bossPower / currentPower.toFixed(1));
+        tempoBatalhado += Math.round(poderBoss / poderAtual.toFixed(1));
 
-        return selected;
+        return guerreirosSelecionados;
     }
 
-    // Display path step by step
-    function displayPathStepByStep(path, tabela, matriz) {
+    // display caminho passo a passo
+    function displayCaminhoPassoPorPasso(caminho, tabela, matriz) {
         const rows = tabela.querySelectorAll('tr');
-        const originalColors = [];
+        const coresOriginais = [];
 
-        // Store original colors for restoration
-        for (const pos of path) {
+        // restauracao
+        for (const pos of caminho) {
             const celula = rows[pos.row].querySelectorAll('td')[pos.col];
-            originalColors.push({
+            coresOriginais.push({
                 position: pos,
                 color: celula.style.backgroundColor
             });
         }
 
-        let step = 0;
-        let elapsedTime = 0;
+        let passo = 0;
+        let tempoPassado = 0;
         const timerDisplay = document.getElementById('timerDisplay');
 
         // Helper function to get terrain cost
-        function getTerrainCost(celulaType) {
+        function getCustoTerreno(celulaType) {
             switch (celulaType) {
                 case 14: return 200; // Montanhoso
                 case 15: return 1;   // Plano
                 case 16: return 5;   // Rochoso
-                default: return 1;   // Default cost for other celulas
+                default: return 1;
             }
         }
 
-        function showNextStep() {
-            if (step < path.length) {
-                // Get current position
-                const pos = path[step];
+        function mostraProximoPasso() {
+            if (passo < caminho.length) {
+                const pos = caminho[passo];
                 const celula = rows[pos.row].querySelectorAll('td')[pos.col];
                 const celulaType = matriz[pos.row][pos.col];
 
-                // Color current position red
                 celula.style.backgroundColor = 'red';
 
-                // Check if this is a house (1-12)
                 if (celulaType >= 1 && celulaType <= 12) {
-                    // Pause the path animation and show boss fight
-                    mostraLutaBoss(celulaType, (battleTime) => {
-                        // Add battle time to total
-                        elapsedTime += battleTime + 1;
-                        timerDisplay.textContent = `Tempo: ${elapsedTime} minutos`;
-
-                        // Continue to next step
-                        step++;
-                        setTimeout(showNextStep, 40);
+                    mostraLutaBoss(celulaType, (duracaoBatalha) => {
+                        tempoPassado += duracaoBatalha + 1;
+                        timerDisplay.textContent = `Tempo: ${tempoPassado} minutos`;
+                        passo++;
+                        setTimeout(mostraProximoPasso, 40);
                     });
                 } else {
-                    // Add time for this step (except for the comeco position)
-                    if (step > 0) {
-                        const stepCost = getTerrainCost(matriz[pos.row][pos.col]);
-                        elapsedTime += stepCost;
-                        timerDisplay.textContent = `Tempo total: ${elapsedTime} minutos`;
+                    if (passo > 0) {
+                        const custoPasso = getCustoTerreno(matriz[pos.row][pos.col]);
+                        tempoPassado += custoPasso;
+                        timerDisplay.textContent = `Tempo total: ${tempoPassado} minutos`;
                     }
 
-                    // Move to next step
-                    step++;
-                    setTimeout(showNextStep, 40);
+                    passo++;
+                    setTimeout(mostraProximoPasso, 40);
                 }
             } else {
-                // Check if all boss fights were won
-                if (checkAllBossesDefeated(path, matriz)) {
-                    // Show completion message with total time
+                if (verificaBossesDerrotados(caminho, matriz)) {
                     botaoEncontrarCaminho.textContent = 'Simulação finalizada.';
 
                     const timerPercurso = document.createElement('div');
@@ -879,23 +808,20 @@ document.getElementById('playButton').addEventListener('click', async () => {
             }
         }
 
-        // Function to check if all bosses in the path were defeated
-        function checkAllBossesDefeated(path, matriz) {
-            const defeatedHouses = new Set();
+        function verificaBossesDerrotados(caminho, matriz) {
+            const casasDerrotadas = new Set();
 
-            // Check each position in the path
-            for (const pos of path) {
+            for (const pos of caminho) {
                 const celulaType = matriz[pos.row][pos.col];
                 if (celulaType >= 1 && celulaType <= 12) {
-                    defeatedHouses.add(celulaType);
+                    casasDerrotadas.add(celulaType);
                 }
             }
 
-            // Check if we have 12 houses defeated
-            return defeatedHouses.size === 12;
+            return casasDerrotadas.size === 12;
         }
 
-        // Reset timer display and knight hearts for new game
+        // reset timer display e coracoes para novo jogo
         timerDisplay.textContent = 'Tempo: 0 minutos';
         nomesCavaleiros.forEach(nome => {
             vidasCavaleiros
@@ -903,7 +829,6 @@ document.getElementById('playButton').addEventListener('click', async () => {
         });
         atualizaVidaCavaleiros();
 
-        // comeco the path animation
-        showNextStep();
+        mostraProximoPasso();
     }
 });
