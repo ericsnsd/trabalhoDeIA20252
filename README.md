@@ -1,3 +1,3 @@
 # trabalhoDeIA
 Trabalho Final da Disciplina de Inteligência Artificial
-https://brunorcoelho.github.io/trabalhoDeIA/
+https://github.com/ericsnsd/trabalhoDeIA20252
